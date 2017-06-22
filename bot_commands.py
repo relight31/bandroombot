@@ -1,3 +1,6 @@
+#import modules used here
+from telegram import ReplyKeyboardMarkup
+
 start_text = "Hi {}! I am the KE Band Room Bot.\
 \n\nI can assist you with booking the Band Room for rehearsals or trainings.\
 \n\nTo place a booking, type /newbooking."
@@ -11,18 +14,19 @@ help_text = "Here is a list of commands you can give me.\
 \n\n/help: View this guide again."
 
 active_sessions = {}
-admin_id = 85548066
+admin_id = 85548066 #Russell
 unauth_user_msg = "Sorry {}, you do not have access to this function."
 def workinprogress(bot, update):
     user_name = update.message.from_user.first_name
-    bot.send_message(chat_id=update.message.chat_id, text="Sorry {}, this \
+    bot.send_message(chat_id=update.message.chat_id, text="Sorry {}, this\
     function is not ready yet.".format(user_name))
 
 def whoami(bot, update):
     user_name = update.message.from_user.first_name
     user_id = update.message.from_user.id
+    chat_idno = update.message.chat_id
     bot.send_message(chat_id=update.message.chat_id, \
-    text="user = {}, id = {}".format(user_name, user_id))
+    text="user = {}, id = {}, chat_id = {}".format(user_name, user_id, chat_idno))
 
 def unknown(bot, update):
     user_name = update.message.from_user.first_name
@@ -57,7 +61,7 @@ def open_session(bot, update):
         if dev_mode:
             print("Session created")
 
-def end_session(bot, update): #need to find new session tracking
+def end_session(bot, update):
     id = update.message.from_user.id
     user_name = update.message.from_user.first_name
     if id in active_sessions:
@@ -71,3 +75,8 @@ def end_session(bot, update): #need to find new session tracking
         text="You do not currently have an active session, {}.".format(user_name))
         if dev_mode:
             print("No active sessions")
+
+def newbooking(bot,update):
+    button_list=[["Hello", "Poop"]]
+    update.message.reply_text("potato", reply_markup=ReplyKeyboardMarkup(\
+    button_list, one_time_keyboard=True))

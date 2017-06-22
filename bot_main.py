@@ -17,7 +17,7 @@ echo_handler = MessageHandler(Filters.text, echo)
 whoami_handler = CommandHandler("whoami", whoami)
 unknown_handler = MessageHandler(Filters.command, unknown)
 
-newbooking_handler = CommandHandler('newbooking', workinprogress)
+newbooking_handler = CommandHandler('newbooking', newbooking)
 checkstatus_handler = CommandHandler('checkstatus', workinprogress)
 amend_handler = CommandHandler('amend', workinprogress)
 cancel_handler = CommandHandler('cancel', workinprogress)
