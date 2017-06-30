@@ -8,6 +8,7 @@ dispatcher = updater.dispatcher
 
 from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler, Filters
+from telegram.ext import CallbackQueryHandler
 
 start_handler = CommandHandler('start', start)
 help_handler = CommandHandler('help', tutorial)
@@ -35,6 +36,8 @@ dispatcher.add_handler(checkstatus_handler)
 dispatcher.add_handler(amend_handler)
 dispatcher.add_handler(cancel_handler)
 dispatcher.add_handler(view_handler)
+
+dispatcher.add_handler(CallbackQueryHandler(newbooking_callback))
 
 dispatcher.add_handler(unknown_handler)
 

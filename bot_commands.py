@@ -1,5 +1,6 @@
 #import modules used here
 from telegram import ReplyKeyboardMarkup
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
 start_text = "Hi {}! I am the KE Band Room Bot.\
 \n\nI can assist you with booking the Band Room for rehearsals or trainings.\
@@ -77,6 +78,16 @@ def end_session(bot, update):
             print("No active sessions")
 
 def newbooking(bot,update):
-    button_list=[["Hello", "Poop"]]
-    update.message.reply_text("potato", reply_markup=ReplyKeyboardMarkup(\
-    button_list, one_time_keyboard=True))
+    keyboard = [[InlineKeyboardButton("True", callback_data='True'),
+                 InlineKeyboardButton("False", callback_data='False')]]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    update.message.reply_text('Please choose:', reply_markup=reply_markup)
+
+def newbooking_callback(bot, update):
+    query = update.callback_query
+    bot.edit_message_reply_markup(chat_id=query.message.chat_id,\
+    message_id=query.message.message_id)
+    bot.send_message(chat_id=query.message.chat_id,\
+    text='You have chosen {}.'.format(query.data))
