@@ -9,16 +9,29 @@ dispatcher = updater.dispatcher
 from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler, Filters
 from telegram.ext import CallbackQueryHandler
+from telegram.ext import ConversationHandler
+from telegram.ext import RegexHandler
 
 start_handler = CommandHandler('start', start)
 help_handler = CommandHandler('help', tutorial)
-opensession_handler = CommandHandler('opensession', open_session)
-endsession_handler = CommandHandler("endsession", end_session)
-echo_handler = MessageHandler(Filters.text, echo)
+idk_handler = MessageHandler(Filters.text, idk)
 whoami_handler = CommandHandler("whoami", whoami)
+bigbrotherhandler = CommandHandler("togglebigbro", bigbrothertoggle)
 unknown_handler = MessageHandler(Filters.command, unknown)
 
-newbooking_handler = CommandHandler('newbooking', newbooking)
+newbooking_handler = ConversationHandler(
+    entry_points=[CommandHandler('newbooking',newbooking_start)],
+
+    states={
+        CCA: [CallbackQueryHandler(newbooking_gettime)],
+        TIME: [MessageHandler(Filters.text, newbooking_getreason)],
+        REASON: [MessageHandler(Filters.text, newbooking_confirm)]
+    },
+    fallbacks=[
+        CallbackQueryHandler(newbooking_finalise),
+        CommandHandler('cancel', newbooking_cancel)
+    ]
+)
 checkstatus_handler = CommandHandler('checkstatus', workinprogress)
 amend_handler = CommandHandler('amend', workinprogress)
 cancel_handler = CommandHandler('cancel', workinprogress)
@@ -26,10 +39,8 @@ view_handler = CommandHandler('view', workinprogress)
 
 dispatcher.add_handler(start_handler)
 dispatcher.add_handler(help_handler)
-dispatcher.add_handler(opensession_handler)
-dispatcher.add_handler(endsession_handler)
-dispatcher.add_handler(echo_handler)
 dispatcher.add_handler(whoami_handler)
+dispatcher.add_handler(bigbrotherhandler)
 
 dispatcher.add_handler(newbooking_handler)
 dispatcher.add_handler(checkstatus_handler)
@@ -37,8 +48,7 @@ dispatcher.add_handler(amend_handler)
 dispatcher.add_handler(cancel_handler)
 dispatcher.add_handler(view_handler)
 
-dispatcher.add_handler(CallbackQueryHandler(newbooking_callback))
-
+dispatcher.add_handler(idk_handler)
 dispatcher.add_handler(unknown_handler)
 
 ### initialise bot ###
