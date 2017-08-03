@@ -180,7 +180,7 @@ def newbooking_finalise(bot, update):
             \n\nCan you try placing a booking again using /newbooking?".format(user_name))
         else:
             bot.send_message(chat_id=query.message.chat_id,\
-            text="I have successful85548066ly placed your booking, {}.\
+            text="I have successfully placed your booking, {}.\
             I will contact you again soon to let you know if your booking has been\
             approved or rejected. Thank you for using KE Band Room Bot!".format(user_name))
         finally:
@@ -221,15 +221,19 @@ def view_init(bot, update):
             bot.send_message(chat_id=requesting_user,\
             text='I have encountered an error {}, please try again.'.format(user_name))
         else:
-            keyboard = [
-                [InlineKeyboardButton('Yes', callback_data='yesiwanttosee'),\
-                InlineKeyboardButton('No', callback_data='nodontwant')]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            number_of_bookings = len(bookings)
-            bot.send_message(chat_id=requesting_user,\
-            text="You have {} pending bookings, want to review now?".format(str(number_of_bookings)),\
-            reply_markup=reply_markup)
+            if len(bookings) <= 0:
+                bot.send_message(chat_id=requesting_user,\
+                text='You have no pending bookings, {}.'.format(user_name))
+            else:
+                keyboard = [
+                    [InlineKeyboardButton('Yes', callback_data='yesiwanttosee'),\
+                    InlineKeyboardButton('No', callback_data='nodontwant')]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                number_of_bookings = len(bookings)
+                bot.send_message(chat_id=requesting_user,\
+                text="You have {} pending bookings, want to review now?".format(str(number_of_bookings)),\
+                reply_markup=reply_markup)
     else:
         bot.send_message(chat_id=update.message.chat_id,\
         text=unauth_user_msg.format(user_name))
@@ -239,7 +243,7 @@ def view_seebookings(bot, update):
     bot.edit_message_reply_markup(chat_id=query.message.chat_id,\
     message_id=query.message.message_id)
     if query.data == 'yesiwanttosee':
-        #retrieve bookings
+        bookings = pull_newbookings()
         for booking in bookings:
             displaybooking(booking)
     elif query.data == 'nodontwant':
@@ -275,21 +279,52 @@ def displaybooking(booking): #temporary fix
 
 def view_bookingresponse(bot, update):
     query = update.callback_query
-    response = (int(query.data[7]), int(query.data[9:])) # need to parse
-    # pull booking data
-    #name =
-    #user_id =
-    #cca =
-    #time =
-    #reason =
-    if response[2]:
-        # change booking to approved
-        # send message
-        pass
-    elif not response[2]:
-        # change booking to not approved
-        # send message
-        pass
+    if 'apprej.' in query.data:
+        response = int(query.data[7]) # need to parse
+        booking_id = int(query.data[9:])
+
+        current = pull_specific(booking_id)
+
+        name = current[1]
+        cca = current[3]
+        time = current[4]
+        reason = current[5]
+        return_id = current[2]
+
+        if response == 1: #approved
+            try:
+                approve_booking(booking_id)
+            except:
+                #encoutered error
+                pass
+            else:
+                #edit message
+                message_to_booker = '''
+                Booking S/N {0}: APPROVED
+
+                Hi {1}, your booking on {2} for {3} under {4} has been approved.
+
+                Please be reminded to adhere to the timings of your booking \
+                and return the band room to a neat and tidy state before leaving.
+
+                Thank you and enjoy the band room :)
+                '''
+                bot.send_message(chat_id=return_id,\
+                text=message_to_booker.format(booking_id, name, time, reason, cca))
+            pass
+        elif response == 2: #rejected
+            try:
+                reject_booking(booking_id)
+            except:
+                # encounter error
+                pass
+            else:
+                # edit message
+                # send message
+                pass
+            pass
+        else:
+            pass
     else:
         pass
 
