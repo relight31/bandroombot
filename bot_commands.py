@@ -210,6 +210,7 @@ def newbooking_cancel(bot, update):
     return ConversationHandler.END
 
 #functions for approval
+VIEW_RESP = range(0)
 
 def view_init(bot, update):
     requesting_user = update.message.from_user.id
@@ -220,10 +221,12 @@ def view_init(bot, update):
         except:
             bot.send_message(chat_id=requesting_user,\
             text='I have encountered an error {}, please try again.'.format(user_name))
+            return ConversationHandler.END
         else:
             if len(bookings) <= 0:
                 bot.send_message(chat_id=requesting_user,\
                 text='You have no pending bookings, {}.'.format(user_name))
+                return ConversationHandler.END
             else:
                 keyboard = [
                     [InlineKeyboardButton('Yes', callback_data='yesiwanttosee'),\
@@ -234,52 +237,56 @@ def view_init(bot, update):
                 bot.send_message(chat_id=requesting_user,\
                 text="You have {} pending bookings, want to review now?".format(str(number_of_bookings)),\
                 reply_markup=reply_markup)
+                return VIEW_RESP
     else:
         bot.send_message(chat_id=update.message.chat_id,\
         text=unauth_user_msg.format(user_name))
+        return ConversationHandler.END
 
 def view_seebookings(bot, update):
     query = update.callback_query
     bot.edit_message_reply_markup(chat_id=query.message.chat_id,\
     message_id=query.message.message_id)
+    bot.editMessageText(chat_id=query.message.chat_id,\
+    message_id=query.message.message_id,\
+    text=query.message.text+'\n\nRetrieving...')
     if query.data == 'yesiwanttosee':
         bookings = pull_newbookings()
         for booking in bookings:
-            displaybooking(booking)
+            booking_id = booking[0]
+            name = booking[1]
+            cca = booking[3]
+            time = booking[4]
+            reason = booking[5]
+            return_id = booking[2]
+
+            keyboard = [
+                [InlineKeyboardButton('Approve', callback_data='apprej.1.{}'.format(booking_id)),\
+                InlineKeyboardButton('Reject', callback_data='apprej.2.{}'.format(booking_id))]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            text='''
+            Booking no:{0}
+            Return ID: {5}
+            {1} from {2} booking {3} for {4}.
+            '''
+            bot.send_message(chat_id=query.message.chat_id, \
+            text=text.format(booking_id, name, cca, time, reason, return_id),\
+            reply_markup=reply_markup)
+        bot.send_message(chat_id=query.message.chat_id, \
+        text='All bookings retrieved successfully.')
+        return ConversationHandler.END
     elif query.data == 'nodontwant':
         bot.send_message(chat_id=update.message.chat_id,\
         text='Ok then, see you again soon.')
-    else:
-        bot.send_message(chat_id=update.message.chat_id,\
-        text='What are you doing.')
-
-def displaybooking(booking): #temporary fix
-    booking_id = booking[0]
-    name = booking[1]
-    cca = booking[3]
-    time = booking[4]
-    reason = booking[5]
-    return_id = booking[2]
-
-    keyboard = [
-        [InlineKeyboardButton('Approve', callback_data='apprej.1.{}'.format(booking_id)),\
-        InlineKeyboardButton('Reject', callback_data='apprej.2.{}'.format(booking_id))]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    text='''
-    Booking no:{0}
-    Return ID: {5}
-    {1} from {2} booking {3} for {4}.
-    '''
-    russ = 85548066
-    bot.send_message(chat_id=russ, \
-    text=text.format(booking_id, name, cca, time, reason, return_id),\
-    reply_markup=reply_markup)
+        return ConversationHandler.END
 
 def view_bookingresponse(bot, update):
     query = update.callback_query
     if 'apprej.' in query.data:
+        bot.edit_message_reply_markup(chat_id=query.message.chat_id,\
+        message_id=query.message.message_id)
         response = int(query.data[7]) # need to parse
         booking_id = int(query.data[9:])
 
@@ -295,10 +302,12 @@ def view_bookingresponse(bot, update):
             try:
                 approve_booking(booking_id)
             except:
-                #encoutered error
-                pass
+                bot.send_message(chat_id=query.message.chat_id,\
+                text='Sorry, I have encountered an error. Try again?')
             else:
-                #edit message
+                bot.editMessageText(chat_id=query.message.chat_id,\
+                message_id=query.message.message_id,\
+                text=query.message.text+'\n\nAPPROVED')
                 message_to_booker = '''
                 Booking S/N {0}: APPROVED
 
@@ -311,22 +320,26 @@ def view_bookingresponse(bot, update):
                 '''
                 bot.send_message(chat_id=return_id,\
                 text=message_to_booker.format(booking_id, name, time, reason, cca))
-            pass
         elif response == 2: #rejected
             try:
                 reject_booking(booking_id)
             except:
-                # encounter error
-                pass
+                bot.send_message(chat_id=query.message.chat_id,\
+                text='Sorry, I have encountered an error. Try again?')
             else:
-                # edit message
-                # send message
-                pass
+                bot.editMessageText(chat_id=query.message.chat_id,\
+                message_id=query.message.message_id,\
+                text=query.message.text+'\n\nREJECTED')
+                message_to_booker = '''
+                Booking S/N {0}: REJECTED
+
+                Hi {1}, your booking on {2} for {3} under {4} has been rejected.
+
+                Your Cultural Director will contact you shortly.
+                '''
+                bot.send_message(chat_id=return_id,\
+                text=message_to_booker.format(booking_id, name, time, reason, cca))
             pass
-        else:
-            pass
-    else:
-        pass
 
 # functions for amend
 def amend_pullbookings(bot, update):

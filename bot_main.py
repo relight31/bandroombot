@@ -10,7 +10,6 @@ from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler, Filters
 from telegram.ext import CallbackQueryHandler
 from telegram.ext import ConversationHandler
-from telegram.ext import RegexHandler
 
 start_handler = CommandHandler('start', start)
 help_handler = CommandHandler('help', tutorial)
@@ -35,7 +34,15 @@ newbooking_handler = ConversationHandler(
 checkstatus_handler = CommandHandler('checkstatus', workinprogress)
 amend_handler = CommandHandler('amend', workinprogress)
 cancel_handler = CommandHandler('cancel', workinprogress)
-view_handler = CommandHandler('view', workinprogress)
+view_handler = ConversationHandler(
+    entry_points=[CommandHandler('view', view_init)],
+
+    states={
+        VIEW_RESP: [CallbackQueryHandler(view_seebookings)]
+    },
+    fallbacks=[]
+)
+view_bookingresponse_handler = CallbackQueryHandler(view_bookingresponse)
 
 dispatcher.add_handler(start_handler)
 dispatcher.add_handler(help_handler)
@@ -47,6 +54,7 @@ dispatcher.add_handler(checkstatus_handler)
 dispatcher.add_handler(amend_handler)
 dispatcher.add_handler(cancel_handler)
 dispatcher.add_handler(view_handler)
+dispatcher.add_handler(view_bookingresponse_handler)
 
 dispatcher.add_handler(idk_handler)
 dispatcher.add_handler(unknown_handler)
