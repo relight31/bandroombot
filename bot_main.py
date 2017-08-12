@@ -31,7 +31,7 @@ newbooking_handler = ConversationHandler(
         CommandHandler('cancel', newbooking_cancel)
     ]
 )
-checkstatus_handler = CommandHandler('checkstatus', workinprogress)
+checkstatus_handler = CommandHandler('checkstatus', checkstatus_init)
 amend_handler = CommandHandler('amend', workinprogress)
 cancel_handler = CommandHandler('cancel', workinprogress)
 view_handler = ConversationHandler(

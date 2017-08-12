@@ -39,7 +39,17 @@ def pull_specific(booking_id):
     return results
 
 def booking_search(**kwargs):
-    pass
+    statement = "SELECT * FROM bookings WHERE "
+    for header in kwargs:
+        append = '{0} = {1} AND '.format(str(header), str(kwargs[header]))
+        statement += append
+    statement = statement[:-5]
+    conn = sqlite3.connect('bot_db.db')
+    cursor = conn.cursor()
+    cursor.execute(statement)
+    results = cursor.fetchall()
+    conn.close()
+    return results
 
 def approve_booking(booking_id):
     conn = sqlite3.connect('bot_db.db')

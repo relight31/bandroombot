@@ -217,7 +217,7 @@ def view_init(bot, update):
     user_name = update.message.from_user.first_name
     if requesting_user in admin_id:
         try:
-            bookings = pull_newbookings()
+            bookings = booking_search(approved = 0)
         except:
             bot.send_message(chat_id=requesting_user,\
             text='I have encountered an error {}, please try again.'.format(user_name))
@@ -251,7 +251,7 @@ def view_seebookings(bot, update):
     message_id=query.message.message_id,\
     text=query.message.text+'\n\nRetrieving...')
     if query.data == 'yesiwanttosee':
-        bookings = pull_newbookings()
+        bookings = booking_search(approved=0)
         for booking in bookings:
             booking_id = booking[0]
             name = booking[1]
@@ -341,12 +341,65 @@ def view_bookingresponse(bot, update):
                 text=message_to_booker.format(booking_id, name, time, reason, cca))
             pass
 
-# functions for amend
-def amend_pullbookings(bot, update):
-    pass
+# functions for checkstat
 
-def amend_options(bot,update):
-    pass
+def checkstatus_init(bot,update):
+    user_id = update.message.from_user.id
+    user_name = update.message.from_user.first_name
+    try:
+        results = booking_search(user_id=user_id, approved=0)
+    except:
+        bot.send_message(chat_id=user_id, \
+        text="I'm sorry {}, I have encountered an error retrieving your pending bookings.\n\
+        Please try again later.".format(user_name))
+    else:
+        if len(results) <= 0:
+            bot.send_message(chat_id=user_id, \
+            text="You have no pending bookings, {}.".format(user_name))
+        else:
+            header = 'You have the following pending bookings.\n\n'
+            for booking in results:
+                cca = booking[3]
+                time = booking[4]
+                reason = booking[5]
+                append = '{0}: {1} for {2}\n'.format(cca,time,reason)
+                header += append
+            header += '\nWould you like to amend or cancel any of these bookings?'
 
-def amend_action(bot, update):
-    pass
+            keyboard = [
+                [InlineKeyboardButton('Amend', callback_data='amendo.{}'.format(str(user_id))),\
+                InlineKeyboardButton('Cancel', callback_data='cancel.{}'.format(str(user_id)))]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            bot.send_message(chat_id=user_id, text=header, reply_markup=reply_markup)
+
+def checkstatus_responder(bot,update):
+    query = update.callback_query
+    user_id = update.message.from_user.id
+    user_name = update.message.from_user.first_name
+    if "amendo." or "cancel." in query.data:
+        bot.edit_message_reply_markup(chat_id=query.message.chat_id,\
+        message_id=query.message.message_id)
+        try:
+            results = booking_search(user_id=user_id, approved=0)
+        except:
+            bot.send_message(chat_id=user_id, \
+            text="I'm sorry {}, I have encountered an error retrieving your pending bookings.\n\
+            Please try again later.".format(user_name))
+        else:
+            if len(results) <= 0:
+                response = '''
+                You have no currently pending bookings, {}.
+
+                Most likely, your booking has already been reviewed and Approved/Rejected.
+
+                If you need clarification, please speak to your Cultural Director.
+                Otherwise, you can place a new booking using /newbooking.
+                '''
+                bot.send_message(chat_id=user_id, \
+                text=response.format(user_name))
+                return Conversation.END
+            else:
+                keyboard = []
+                pass
