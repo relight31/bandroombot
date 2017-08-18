@@ -2,42 +2,26 @@
 from telegram import ReplyKeyboardMarkup
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ConversationHandler
-from db_helper import *
 
-start_text = "Hi {}! I am the KE Band Room Bot.\
-\n\nI can assist you with booking the Band Room for rehearsals or trainings.\
-\n\nTo place a booking, type /newbooking."
+start_text = '''
+Hi {}! I am the KE CMB Bot.
+If you need CMB to provide AV support for your event, I can help you place a request.
+To place a request, type /newrequest."
+'''
 
-help_text = "Here is a list of commands you can give me.\
-\n\n/newbooking: Place a booking for the Band Room.\
-\n/checkstatus: Check if your bookings have been approved.\
-\n/amend: Amend details of your pending bookings. \
-(You may not amend bookings after they have been approved/rejected)\
-\n/cancel: Cancel any pending bookings you have placed.\
-\n\n/help: View this guide again."
+help_text = '''
+Here is a list of commands you can give me.
+/newbooking: Place a booking for the Band Room.
+/checkstatus: Check if your bookings have been approved.
+/help: View this guide again.
+'''
 
 #states
 big_brother = True
 active_sessions = {}
-admin_id = {85548066} #Russell
+admin_id = {85548066:'Russell'}
+cmb_head = 85548066
 unauth_user_msg = "Sorry {}, you do not have access to this function."
-
-def bigbrothertoggle(bot,update):#not working
-    global big_brother
-    user_name = update.message.from_user.first_name
-    user_id = update.message.from_user.id
-    if user_id in admin_id:
-        if big_brother:
-            big_brother = False
-            bot.send_message(chat_id=update.message.chat_id,\
-            text="Big Brother mode: OFF")
-        else:
-            big_brother = True
-            bot.send_message(chat_id=update.message.chat_id,\
-            text="Big Brother mode: ON")
-    else:
-        bot.send_message(chat_id=update.message.chat_id, \
-        text=unauth_user_msg.format(user_name))
 
 def workinprogress(bot, update):
     user_name = update.message.from_user.first_name
@@ -71,335 +55,205 @@ def idk(bot, update):
     text="I'm sorry, I don't understand what you mean by '{}'.".format(response))
 
 # Functions and states for newbooking
-CCA, TIME, REASON, CONFIRM = range(4)
+PHONE, CCA, EVENT, VENUE, DATETIME, DESCRIPTION, CONFIRM = range(7)
 
-def newbooking_start(bot,update):
+def newrequest_start(bot,update):
     user_id = update.message.from_user.id
     user_name = update.message.from_user.first_name
     if user_id in active_sessions:
+        # don't cb
         pass
     else:
         #create session
         session = {'name':user_name, 'return_id':user_id}
         active_sessions[user_id] = session
-        #fill session
-        cca_keyboard = [
-            [InlineKeyboardButton('Aca', callback_data='cca.Aca'),\
-            InlineKeyboardButton('Amplitude', callback_data='cca.Amplitude')],
-            [InlineKeyboardButton('Band', callback_data='cca.Band'),\
-            InlineKeyboardButton('Choir', callback_data='cca.Choir')],
-            [InlineKeyboardButton('Ensemble', callback_data='cca.Ensemble'),\
-            InlineKeyboardButton('Xinyao', callback_data='cca.Xinyao')]
-        ]
-        reply_markup = InlineKeyboardMarkup(cca_keyboard)
-        message_text = "Hi {}, let's start a new booking.\
-        BTW you can cancel this current booking at any time using /cancel.\
-        \n\nPlease select your cca."
-        user_name = update.message.from_user.first_name
+
+        message_text = '''
+        Hi {}, let's start a new request.
+
+        Can I have your phone number?
+
+        BTW you can cancel this current booking at any time with /cancel.
+        '''
         bot.send_message(chat_id=update.message.chat_id, \
-        text=message_text.format(user_name), reply_markup=reply_markup)
-        return CCA
+        text=message_text.format(user_name))
+        return PHONE
 
-def newbooking_gettime(bot, update):
-    query = update.callback_query
-    chosen_cca = query.data[4:]
-    user_id = query.message.chat_id
-    active_sessions[user_id]['cca']=chosen_cca
-    bot.edit_message_reply_markup(chat_id=query.message.chat_id,\
-    message_id=query.message.message_id)
-    message_content = "You are booking under {}.\n\n\
-    Please enter the date and time you would like to book the Band Room for.\
-    Keep your bookings max 3 hours long so that others have a chance to use \
-    the room for their practices too.\n\n\
-    You can place multiple bookings in one go. eg. 24 Sep 7pm - 9pm, 24 Sep 1900 - 2100 etc "
-    bot.send_message(chat_id=query.message.chat_id,\
-    text=message_content.format(chosen_cca))
-    return TIME
-
-def newbooking_getreason(bot, update):
-    user_id = update.message.from_user.id
-    chosen_time = update.message.text
-    active_sessions[user_id]['time']=chosen_time
+def newrequest_getcca(bot, update):
+    phone = update.message.text
+    user_id = update.message.chat_id
     user_name = update.message.from_user.first_name
-    message_content = "You are booking from {0}.\n\n\
-    Ok {1}, now please tell me your purpose of this booking.\n\n\
-    eg. rehearsal for NOTA, sectional practice etc."
-    bot.send_message(chat_id=update.message.chat_id, \
-    text=message_content.format(chosen_time, user_name))
-    return REASON
+    active_sessions[user_id]['phone']=phone
+    message_content = '''
+    Alright {0} I have your phone number {1}.
 
-def newbooking_confirm(bot, update):
-    chosen_reason = update.message.text
+    What cca are you representing?
+    '''
+    bot.send_message(chat_id=update.message.chat_id,\
+    text=message_content.format(user_name,str(phone)))
+    return CCA
+
+def newrequest_geteventname(bot, update):
     user_id = update.message.from_user.id
-    active_sessions[user_id]['reason']=chosen_reason
+    cca = update.message.text
+    active_sessions[user_id]['cca']=cca
+    user_name = update.message.from_user.first_name
+    message_content = '''
+    Okay {0} from {1},
+
+    What is the name of your event?
+    '''
+    bot.send_message(chat_id=update.message.chat_id, \
+    text=message_content.format(user_name, cca))
+    return EVENT
+
+def newrequest_getvenue(bot, update):
+    user_id = update.message.from_user.id
+    event = update.message.text
+    active_sessions[user_id]['event']=event
+    user_name = update.message.from_user.first_name
+    message_content = '''
+    Where is {0} held?
+    '''
+    bot.send_message(chat_id=update.message.chat_id, \
+    text=message_content.format(event))
+    return VENUE
+
+def newrequest_getdatetime(bot, update):
+    user_id = update.message.from_user.id
+    venue = update.message.text
+    active_sessions[user_id]['venue']=venue
+    user_name = update.message.from_user.first_name
+    event = active_sessions[user_id]['event']
+    message_content = '''
+    {0} will be held at {1} on what date and time? Please include start and end time.
+
+    eg 24 Sep, 7pm - 9pm
+    '''
+    bot.send_message(chat_id=update.message.chat_id, \
+    text=message_content.format(event, venue))
+    return DATETIME
+
+def newrequest_getdescription(bot, update):
+    user_id = update.message.from_user.id
+    datetime = update.message.text
+    active_sessions[user_id]['datetime'] = datetime
+    user_name = update.message.from_user.first_name
+    message_content = '''
+    Tell me more about your event, {0}.
+
+    What items do you have planned for your event?
+    Will there be any performances?
+    Do you plan to use the projector and screen?
+    Do you have any special requests?
+
+    Please be as descriptive as possible! The more details I have, the better I can assist you :)
+    '''
+    bot.send_message(chat_id=update.message.chat_id, \
+    text=message_content.format(user_name))
+    return DESCRIPTION
+
+def newrequest_confirm(bot, update):
+    description = update.message.text
+    user_id = update.message.from_user.id
+    active_sessions[user_id]['description']=description
     user_name = active_sessions[user_id]['name']
     cca = active_sessions[user_id]['cca']
-    time = active_sessions[user_id]['time']
-    reason = active_sessions[user_id]['reason']
-    message_content = "Ok {0}, just to confirm, you are placing a booking for \
-    {1}, from {2} for the purpose of {3}.\n\n\
-    Is that correct?"
+    phone = active_sessions[user_id]['phone']
+    event = active_sessions[user_id]['event']
+    venue = active_sessions[user_id]['venue']
+    datetime = active_sessions[user_id]['datetime']
+    description = active_sessions[user_id]['description']
+    message_content = '''
+    Alright {0}, let me confirm a few things before submitting your request.
+
+    Phone: {1}
+    CCA: {2}
+    Event Name: {3}
+    Venue: {4}
+    Date/Time: {5}
+    Description:
+    {6}
+
+    Is this correct?
+    '''.format(user_name, phone, cca, event, venue, datetime, description)
+    message_id = update.message.message_id
     keyboard = [
-        [InlineKeyboardButton('Yes', callback_data='{}.yes'.format(user_id)),\
-        InlineKeyboardButton('No', callback_data='{}.no'.format(user_id))]
+        [InlineKeyboardButton('Yes', callback_data='yes.{}'.format(message_id)),\
+        InlineKeyboardButton('No', callback_data='no.{}'.format(message_id))]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     bot.send_message(chat_id=update.message.chat_id,\
-    text=message_content.format(user_name,cca,time,reason),\
-    reply_markup=reply_markup)
+    text=message_content, reply_markup=reply_markup)
 
-def parse_id(string):
-    counter = 0
-    found = False
-    while not found:
-        test = string[counter]
-        if test == '.':
-            found = True
-        else:
-            counter += 1
-    return counter
-
-def newbooking_finalise(bot, update):
+def newrequest_finalise(bot, update):
     query = update.callback_query
     bot.edit_message_reply_markup(chat_id=query.message.chat_id,\
     message_id=query.message.message_id)
-    dot = parse_id(query.data)
-    user_id = int(query.data[:dot])
-    response = query.data[(dot+1):]
+    response = query.data.split('.')
+    user_id = query.from_user.id
     user_name = active_sessions[user_id]['name']
-    if response == 'yes':
+    if response[0] == 'yes':
         bot.send_message(chat_id=query.message.chat_id,\
-        text="Ok, give me a moment to place your booking.")
-        #try add to db
+        text="Ok, give me a moment...")
+        #try send to dylan
         try:
-            booking = active_sessions[user_id]
-            make_booking(booking)
+            user_name = active_sessions[user_id]['name']
+            cca = active_sessions[user_id]['cca']
+            phone = active_sessions[user_id]['phone']
+            event = active_sessions[user_id]['event']
+            venue = active_sessions[user_id]['venue']
+            datetime = active_sessions[user_id]['datetime']
+            description = active_sessions[user_id]['description']
+            message_content = '''
+            New CMB request
+
+            Name: {0}
+            Phone: {1}
+            CCA: {2}
+            Event Name: {3}
+            Venue: {4}
+            Date/Time: {5}
+            Description:
+            {6}
+            '''.format(user_name, phone, cca, event, venue, datetime, description)
+            bot.send_message(chat_id=cmb_head, text=message_content)
         except:
             bot.send_message(chat_id=query.message.chat_id,\
-            text="Sorry {}, I have run into a problem placing your booking.\
-            \n\nCan you try placing a booking again using /newbooking?".format(user_name))
+            text='''
+            Sorry {}, I have run into a problem placing your request.
+            Can you try again using /newrequest?
+            '''.format(user_name))
         else:
             bot.send_message(chat_id=query.message.chat_id,\
-            text="I have successfully placed your booking, {}.\
-            I will contact you again soon to let you know if your booking has been\
-            approved or rejected. Thank you for using KE Band Room Bot!".format(user_name))
+            text='''
+            I have successfully placed your request, {}.
+            I will contact you again soon to let you know if your request has been approved or rejected. Thank you!
+            '''.format(user_name))
         finally:
             del active_sessions[user_id]
             return ConversationHandler.END
-    elif response == 'no':
+    elif response[0] == 'no':
         del active_sessions[user_id]
         bot.send_message(chat_id=query.message.chat_id,\
-        text="Alright {}, I have cancelled your booking. If you wish to make a \
-        new booking, you can simply type /newbooking again. \
-        See you soon!".format(user_name))
+        text='''
+        Alright {}, I have cancelled your request. If you wish to make a new request, you can simply type /newrequest again.
+        See you soon!
+        '''.format(user_name))
         return ConversationHandler.END
     else:
         bot.send_message(chat_id=query.message.chat_id,\
         text="I'm sorry, I don't understand what you mean. \
-        Could we start again with /newbooking?")
+        Could we start again with /newrequest?")
         return ConversationHandler.END
 
-def newbooking_cancel(bot, update):
+def newrequest_cancel(bot, update):
     user_id = update.message.from_user.id
     user_name = update.message.from_user.first_name
     del active_sessions[user_id]
     bot.send_message(chat_id=update.message.chat_id,\
-    text="Alright {}, I have cancelled your booking. If you wish to make a \
-    new booking, you can simply type /newbooking again. \
-    See you soon!".format(user_name))
+    text='''
+    Alright {}, I have cancelled your request. If you wish to make a new request, you can simply type /newrequest again.
+    See you soon!
+    '''.format(user_name))
     return ConversationHandler.END
-
-#functions for approval
-VIEW_RESP = range(0)
-
-def view_init(bot, update):
-    requesting_user = update.message.from_user.id
-    user_name = update.message.from_user.first_name
-    if requesting_user in admin_id:
-        try:
-            bookings = booking_search(approved = 0)
-        except:
-            bot.send_message(chat_id=requesting_user,\
-            text='I have encountered an error {}, please try again.'.format(user_name))
-            return ConversationHandler.END
-        else:
-            if len(bookings) <= 0:
-                bot.send_message(chat_id=requesting_user,\
-                text='You have no pending bookings, {}.'.format(user_name))
-                return ConversationHandler.END
-            else:
-                keyboard = [
-                    [InlineKeyboardButton('Yes', callback_data='yesiwanttosee'),\
-                    InlineKeyboardButton('No', callback_data='nodontwant')]
-                ]
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                number_of_bookings = len(bookings)
-                bot.send_message(chat_id=requesting_user,\
-                text="You have {} pending bookings, want to review now?".format(str(number_of_bookings)),\
-                reply_markup=reply_markup)
-                return VIEW_RESP
-    else:
-        bot.send_message(chat_id=update.message.chat_id,\
-        text=unauth_user_msg.format(user_name))
-        return ConversationHandler.END
-
-def view_seebookings(bot, update):
-    query = update.callback_query
-    bot.edit_message_reply_markup(chat_id=query.message.chat_id,\
-    message_id=query.message.message_id)
-    bot.editMessageText(chat_id=query.message.chat_id,\
-    message_id=query.message.message_id,\
-    text=query.message.text+'\n\nRetrieving...')
-    if query.data == 'yesiwanttosee':
-        bookings = booking_search(approved=0)
-        for booking in bookings:
-            booking_id = booking[0]
-            name = booking[1]
-            cca = booking[3]
-            time = booking[4]
-            reason = booking[5]
-            return_id = booking[2]
-
-            keyboard = [
-                [InlineKeyboardButton('Approve', callback_data='apprej.1.{}'.format(booking_id)),\
-                InlineKeyboardButton('Reject', callback_data='apprej.2.{}'.format(booking_id))]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-
-            text='''
-            Booking no:{0}
-            Return ID: {5}
-            {1} from {2} booking {3} for {4}.
-            '''
-            bot.send_message(chat_id=query.message.chat_id, \
-            text=text.format(booking_id, name, cca, time, reason, return_id),\
-            reply_markup=reply_markup)
-        bot.send_message(chat_id=query.message.chat_id, \
-        text='All bookings retrieved successfully.')
-        return ConversationHandler.END
-    elif query.data == 'nodontwant':
-        bot.send_message(chat_id=update.message.chat_id,\
-        text='Ok then, see you again soon.')
-        return ConversationHandler.END
-
-def view_bookingresponse(bot, update):
-    query = update.callback_query
-    if 'apprej.' in query.data:
-        bot.edit_message_reply_markup(chat_id=query.message.chat_id,\
-        message_id=query.message.message_id)
-        response = int(query.data[7]) # need to parse
-        booking_id = int(query.data[9:])
-
-        current = pull_specific(booking_id)
-
-        name = current[1]
-        cca = current[3]
-        time = current[4]
-        reason = current[5]
-        return_id = current[2]
-
-        if response == 1: #approved
-            try:
-                approve_booking(booking_id)
-            except:
-                bot.send_message(chat_id=query.message.chat_id,\
-                text='Sorry, I have encountered an error. Try again?')
-            else:
-                bot.editMessageText(chat_id=query.message.chat_id,\
-                message_id=query.message.message_id,\
-                text=query.message.text+'\n\nAPPROVED')
-                message_to_booker = '''
-                Booking S/N {0}: APPROVED
-
-                Hi {1}, your booking on {2} for {3} under {4} has been approved.
-
-                Please be reminded to adhere to the timings of your booking \
-                and return the band room to a neat and tidy state before leaving.
-
-                Thank you and enjoy the band room :)
-                '''
-                bot.send_message(chat_id=return_id,\
-                text=message_to_booker.format(booking_id, name, time, reason, cca))
-        elif response == 2: #rejected
-            try:
-                reject_booking(booking_id)
-            except:
-                bot.send_message(chat_id=query.message.chat_id,\
-                text='Sorry, I have encountered an error. Try again?')
-            else:
-                bot.editMessageText(chat_id=query.message.chat_id,\
-                message_id=query.message.message_id,\
-                text=query.message.text+'\n\nREJECTED')
-                message_to_booker = '''
-                Booking S/N {0}: REJECTED
-
-                Hi {1}, your booking on {2} for {3} under {4} has been rejected.
-
-                Your Cultural Director will contact you shortly.
-                '''
-                bot.send_message(chat_id=return_id,\
-                text=message_to_booker.format(booking_id, name, time, reason, cca))
-            pass
-
-# functions for checkstat
-
-def checkstatus_init(bot,update):
-    user_id = update.message.from_user.id
-    user_name = update.message.from_user.first_name
-    try:
-        results = booking_search(user_id=user_id, approved=0)
-    except:
-        bot.send_message(chat_id=user_id, \
-        text="I'm sorry {}, I have encountered an error retrieving your pending bookings.\n\
-        Please try again later.".format(user_name))
-    else:
-        if len(results) <= 0:
-            bot.send_message(chat_id=user_id, \
-            text="You have no pending bookings, {}.".format(user_name))
-        else:
-            header = 'You have the following pending bookings.\n\n'
-            for booking in results:
-                cca = booking[3]
-                time = booking[4]
-                reason = booking[5]
-                append = '{0}: {1} for {2}\n'.format(cca,time,reason)
-                header += append
-            header += '\nWould you like to amend or cancel any of these bookings?'
-
-            keyboard = [
-                [InlineKeyboardButton('Amend', callback_data='amendo.{}'.format(str(user_id))),\
-                InlineKeyboardButton('Cancel', callback_data='cancel.{}'.format(str(user_id)))]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-
-            bot.send_message(chat_id=user_id, text=header, reply_markup=reply_markup)
-
-def checkstatus_responder(bot,update):
-    query = update.callback_query
-    user_id = update.message.from_user.id
-    user_name = update.message.from_user.first_name
-    if "amendo." or "cancel." in query.data:
-        bot.edit_message_reply_markup(chat_id=query.message.chat_id,\
-        message_id=query.message.message_id)
-        try:
-            results = booking_search(user_id=user_id, approved=0)
-        except:
-            bot.send_message(chat_id=user_id, \
-            text="I'm sorry {}, I have encountered an error retrieving your pending bookings.\n\
-            Please try again later.".format(user_name))
-        else:
-            if len(results) <= 0:
-                response = '''
-                You have no currently pending bookings, {}.
-
-                Most likely, your booking has already been reviewed and Approved/Rejected.
-
-                If you need clarification, please speak to your Cultural Director.
-                Otherwise, you can place a new booking using /newbooking.
-                '''
-                bot.send_message(chat_id=user_id, \
-                text=response.format(user_name))
-                return Conversation.END
-            else:
-                keyboard = []
-                pass
