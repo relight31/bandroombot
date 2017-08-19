@@ -19,8 +19,8 @@ Here is a list of commands you can give me.
 #states
 big_brother = True
 active_sessions = {}
-admin_id = {85548066:'Russell'}
-cmb_head = 85548066
+admin_id = {264511214:"Dylan"}
+cmb_head = 264511214
 unauth_user_msg = "Sorry {}, you do not have access to this function."
 
 def workinprogress(bot, update):
